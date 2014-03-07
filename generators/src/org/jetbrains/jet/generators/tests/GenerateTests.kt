@@ -97,6 +97,8 @@ import org.jetbrains.jet.resolve.AbstractReferenceToJavaWithWrongFileStructureTe
 import org.jetbrains.jet.plugin.navigation.AbstractKotlinGotoTest
 import org.jetbrains.jet.plugin.AbstractExpressionSelectionTest
 import org.jetbrains.jet.plugin.refactoring.move.AbstractJetMoveTest
+import org.jetbrains.jet.plugin.libraries.AbstractDecompiledTextTest
+import org.jetbrains.jet.plugin.imports.AbstractOptimizeImportsTest
 
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
@@ -274,6 +276,10 @@ fun main(args: Array<String>) {
             model("intentions/convertToExpressionBody", pattern = "^before(\\w+)\\.kt$")
         }
 
+        testClass(javaClass<AbstractIntentionTest>(), "ConvertToBlockBodyTestGenerated") {
+            model("intentions/convertToBlockBody", pattern = "^before(\\w+)\\.kt$")
+        }
+
         testClass(javaClass<AbstractJSBasicCompletionTest>()) {
             model("completion/basic/common")
             model("completion/basic/js")
@@ -363,6 +369,12 @@ fun main(args: Array<String>) {
             model("intentions/removeCurlyBracesFromTemplate", testMethod = "doTestRemoveCurlyFromTemplate")
             model("intentions/insertCurlyBracestsToTemplate", testMethod = "doTestInsertCurlyToTemplate")
             model("intentions/swapBinaryExpression", testMethod = "doTestSwapBinaryExpression")
+            model("intentions/moveLambdaInsideParentheses", testMethod = "doTestMoveLambdaInsideParentheses")
+            model("intentions/moveLambdaOutsideParentheses", testMethod = "doTestMoveLambdaOutsideParentheses")
+            model("intentions/replaceExplicitFunctionLiteralParamWithIt", testMethod = "doTestReplaceExplicitFunctionLiteralParamWithIt")
+            model("intentions/replaceItWithExplicitFunctionLiteralParam", testMethod = "doTestReplaceItWithExplicitFunctionLiteralParam")
+            model("intentions/removeBraces", testMethod = "doTestRemoveBraces")
+            model("intentions/addBraces", testMethod = "doTestAddBraces")
         }
 
         testClass(javaClass<AbstractHierarchyTest>()) {
@@ -501,6 +513,14 @@ fun main(args: Array<String>) {
 
         testClass(javaClass<AbstractExpressionSelectionTest>()) {
             model("expressionSelection", testMethod = "doTestExpressionSelection", pattern = """^([^\.]+)\.kt$""")
+        }
+
+        testClass(javaClass<AbstractDecompiledTextTest>()) {
+            model("libraries/decompiledText", pattern = """^([^\.]+)$""")
+        }
+
+        testClass(javaClass<AbstractOptimizeImportsTest>()) {
+            model("editor/optimizeImports", extension = null, recursive = false)
         }
     }
 

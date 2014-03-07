@@ -108,7 +108,7 @@ public class LambdaTransformer {
         }
     }
 
-    public void doTransform(ConstructorInvocation invocation) {
+    public InlineResult doTransform(ConstructorInvocation invocation) {
         ClassBuilder classBuilder = createClassBuilder();
 
         //TODO: public visibility for inline function
@@ -120,6 +120,10 @@ public class LambdaTransformer {
                                  superName,
                                  interfaces
         );
+
+        // TODO: load synthetic class kind from the transformed class and write the same kind to the copy of that class here
+        // See AsmUtil.writeKotlinSyntheticClassAnnotation
+
         ParametersBuilder builder = ParametersBuilder.newBuilder();
         Parameters parameters = getLambdaParameters(builder, invocation);
 
@@ -128,7 +132,7 @@ public class LambdaTransformer {
                 remapper = new RegeneratedLambdaFieldRemapper(oldLambdaType.getInternalName(), newLambdaType.getInternalName(), parameters, invocation.getCapturedLambdasToInline());
         MethodInliner inliner = new MethodInliner(invoke, parameters, info.subInline(info.nameGenerator.subGenerator("lambda")), oldLambdaType,
                                                   remapper, isSameModule);
-        inliner.doInline(invokeVisitor, new VarRemapper.ParamRemapper(parameters, 0), remapper, false);
+        InlineResult result = inliner.doInline(invokeVisitor, new VarRemapper.ParamRemapper(parameters, 0), remapper, false);
         invokeVisitor.visitMaxs(-1, -1);
 
         generateConstructorAndFields(classBuilder, builder, invocation);
@@ -150,6 +154,7 @@ public class LambdaTransformer {
         classBuilder.done();
 
         invocation.setNewLambdaType(newLambdaType);
+        return result;
     }
 
     private void generateConstructorAndFields(@NotNull ClassBuilder classBuilder, @NotNull ParametersBuilder builder, @NotNull ConstructorInvocation invocation) {
