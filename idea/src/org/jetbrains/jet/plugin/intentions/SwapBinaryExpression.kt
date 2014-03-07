@@ -19,11 +19,7 @@ package org.jetbrains.jet.plugin.intentions
 import com.intellij.openapi.editor.Editor
 import org.jetbrains.jet.lang.psi.JetBinaryExpression
 import org.jetbrains.jet.lang.psi.JetPsiFactory
-import com.intellij.psi.PsiElement
-import org.apache.commons.lang.ObjectUtils.Null
 import org.jetbrains.jet.lang.psi.JetExpression
-import org.jetbrains.jet.lang.psi.JetOperationExpression
-import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
 
 public class SwapBinaryExpression : JetSelfTargetingIntention<JetBinaryExpression>(
         "swap.binary.expression", javaClass()
@@ -77,7 +73,6 @@ public class SwapBinaryExpression : JetSelfTargetingIntention<JetBinaryExpressio
         val newLeft = JetPsiFactory.createExpression(element.getProject(), right.getText())
         left.replace(newLeft)
         right.replace(newRight)
-        //element.getOperationReference().replace(JetPsiFactory.createExpression(element.getProject(), convertedOperator) as JetSimpleNameExpression)
         element.replace(JetPsiFactory.createBinaryExpression(element.getProject(), element.getLeft(), convertedOperator, element.getRight()))
     }
 }
