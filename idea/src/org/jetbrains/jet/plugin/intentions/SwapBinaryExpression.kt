@@ -19,10 +19,38 @@ package org.jetbrains.jet.plugin.intentions
 import com.intellij.openapi.editor.Editor
 import org.jetbrains.jet.lang.psi.JetBinaryExpression
 import org.jetbrains.jet.lang.psi.JetPsiFactory
+import com.intellij.psi.PsiElement
+import org.apache.commons.lang.ObjectUtils.Null
+import org.jetbrains.jet.lang.psi.JetExpression
+import org.jetbrains.jet.lang.psi.JetOperationExpression
+import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
 
 public class SwapBinaryExpression : JetSelfTargetingIntention<JetBinaryExpression>(
         "swap.binary.expression", javaClass()
 ) {
+    class object {
+        val firstLeft = 1
+        val firstRight = 2
+        val nextLeft = 3
+        val nextRight = 4
+    }
+
+    fun getInnermostOperand(element: JetBinaryExpression, position: Int): JetExpression {
+        assert (position <= 4 && position >= 1) {
+            "Unexpected second argument passed to SwapBinaryExpression.getInnermostOperand"
+        }
+        val left = element.getLeft()
+        val right = element.getRight()
+
+        return when (position) {
+            SwapBinaryExpression.firstLeft -> if (left is JetBinaryExpression) getInnermostOperand(left, nextRight) else left as JetExpression
+            SwapBinaryExpression.firstRight -> if (right is JetBinaryExpression) getInnermostOperand(right, nextLeft) else right as JetExpression
+            SwapBinaryExpression.nextLeft -> if (left is JetBinaryExpression) getInnermostOperand(left, nextLeft) else left as JetExpression
+            SwapBinaryExpression.nextRight -> if (right is JetBinaryExpression) getInnermostOperand(right, nextLeft) else right as JetExpression
+            else -> null as JetExpression
+        }
+    }
+
     override fun isApplicableTo(element: JetBinaryExpression): Boolean {
         val operatorTextLiteral = element.getOperationReference().getText()
         val approvedOperators = setOf("+", "plus", "*", "times", "||", "or", "and",
@@ -43,8 +71,13 @@ public class SwapBinaryExpression : JetSelfTargetingIntention<JetBinaryExpressio
             ">=" -> "<="
             else -> operator
         }
-        val left = element.getLeft()
-        val right = element.getRight()
-        element.replace(JetPsiFactory.createBinaryExpression(element.getProject(), right, convertedOperator, left))
+        val left = getInnermostOperand(element, SwapBinaryExpression.firstLeft)
+        val right = getInnermostOperand(element, SwapBinaryExpression.firstRight)
+        val newRight = JetPsiFactory.createExpression(element.getProject(), left.getText())
+        val newLeft = JetPsiFactory.createExpression(element.getProject(), right.getText())
+        left.replace(newLeft)
+        right.replace(newRight)
+        //element.getOperationReference().replace(JetPsiFactory.createExpression(element.getProject(), convertedOperator) as JetSimpleNameExpression)
+        element.replace(JetPsiFactory.createBinaryExpression(element.getProject(), element.getLeft(), convertedOperator, element.getRight()))
     }
 }
