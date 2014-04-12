@@ -37,30 +37,31 @@ public class MakeTypeImplicitInLambdaIntention : JetSelfTargetingIntention<JetFu
     }
 
     override fun applyTo(element: JetFunctionLiteralExpression, editor: Editor) {
-        val paramList = element.getFunctionLiteral().getValueParameterList()
+        val functionLiteral = element.getFunctionLiteral()
+        val paramList = functionLiteral.getValueParameterList()
         val params = paramList?.getParameters()
 
         if (element.hasDeclaredReturnType()) {
             val childAfterParamList = paramList?.getNextSibling()
-            val arrow = element.getFunctionLiteral().getArrowNode()?.getPsi()
+            val arrow = functionLiteral.getArrowNode()?.getPsi()
             val childBeforeArrow = arrow?.getPrevSibling()
-            element.getFunctionLiteral().deleteChildRange(childAfterParamList, childBeforeArrow)
+            functionLiteral.deleteChildRange(childAfterParamList, childBeforeArrow)
             val whiteSpaceBeforeArrow = JetPsiFactory.createWhiteSpace(element.getProject())
-            element.getFunctionLiteral().addBefore(whiteSpaceBeforeArrow, arrow)
+            functionLiteral.addBefore(whiteSpaceBeforeArrow, arrow)
         }
 
-        val hasDeclaredReceiverType = element.getFunctionLiteral().getReceiverTypeRef() != null
+        val hasDeclaredReceiverType = functionLiteral.getReceiverTypeRef() != null
         if (hasDeclaredReceiverType) {
-            val childAfterBrace = element.getFunctionLiteral().getOpenBraceNode().getPsi()?.getNextSibling()
+            val childAfterBrace = functionLiteral.getOpenBraceNode().getPsi()?.getNextSibling()
             val childBeforeParamList = paramList?.getPrevSibling()
-            element.getFunctionLiteral().deleteChildRange(childAfterBrace, childBeforeParamList)
+            functionLiteral.deleteChildRange(childAfterBrace, childBeforeParamList)
         }
 
-        if (params != null && params!!.size() == 1 && params[0].getNameIdentifier() != null) {
+        if (params != null && params.size() == 1 && params[0].getNameIdentifier() != null) {
             paramList!!.replace(params[0].getNameIdentifier()!!)
         }
         else {
-            params?.forEach{
+            params?.forEach {
                 if (it.getNameIdentifier() != null) {
                     it.replace(it.getNameIdentifier()!!)
                 }

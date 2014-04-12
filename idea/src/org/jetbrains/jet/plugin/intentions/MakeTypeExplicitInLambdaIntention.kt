@@ -32,77 +32,73 @@ import org.jetbrains.jet.plugin.codeInsight.ShortenReferences
 public class MakeTypeExplicitInLambdaIntention : JetSelfTargetingIntention<JetFunctionLiteralExpression>(
         "make.type.explicit.in.lambda", javaClass()) {
     override fun isApplicableTo(element: JetFunctionLiteralExpression): Boolean {
-        val params = element.getValueParameters()
-        val hasDeclaredParamsType = params.any { it.getTypeReference() != null }
-        val hasDeclaredReturnType = element.hasDeclaredReturnType()
-        val hasDeclaredReceiverType = element.getFunctionLiteral().getReceiverTypeRef() != null
-
         val context = AnalyzerFacadeWithCache.analyzeFileWithCache(element.getContainingFile() as JetFile).getBindingContext()
-        val func = context.get(BindingContext.FUNCTION, element.getFunctionLiteral())
+        val func = context[BindingContext.FUNCTION, element.getFunctionLiteral()]
         if (func == null || ErrorUtils.containsErrorType(func)) return false
 
-        val expectedReturnType = func!!.getReturnType()
-        val expectedReceiverType = func!!.getReceiverParameter()?.getType()
+        val hasDeclaredReturnType = element.hasDeclaredReturnType()
+        if (!hasDeclaredReturnType && func.getReturnType() != null) return true
 
-        if (!hasDeclaredReturnType && expectedReturnType != null) return true
-        if (!hasDeclaredReceiverType && expectedReceiverType != null) return true
-        if (!hasDeclaredParamsType && func!!.getValueParameters() != null) return true
+        val hasDeclaredReceiverType = element.getFunctionLiteral().getReceiverTypeRef() != null
+        if (!hasDeclaredReceiverType && func.getReceiverParameter()?.getType() != null) return true
+
+        val params = element.getValueParameters()
+        if (params.any { it.getTypeReference() != null }) return true
 
         return false
     }
 
     override fun applyTo(element: JetFunctionLiteralExpression, editor: Editor) {
-        val params = element.getFunctionLiteral().getValueParameterList()
+        val functionLiteral = element.getFunctionLiteral()
         val context = AnalyzerFacadeWithCache.analyzeFileWithCache(element.getContainingFile() as JetFile).getBindingContext()
-        val func = context.get(BindingContext.FUNCTION, element.getFunctionLiteral())!!
-        val valueParameters = func!!.getValueParameters()
-        val expectedReturnType = func!!.getReturnType()
-        val expectedReceiverType = func!!.getReceiverParameter()?.getType()
-        val parameterString = StringUtil.join(valueParameters,
-                                              {(descriptor: ValueParameterDescriptor?): String ->
-                                                  "" + descriptor!!.getName() +
-                                                  ": " + DescriptorRenderer.TEXT.renderType(descriptor!!.getType())
-                                              },
-                                              ", ");
+        val func = context[BindingContext.FUNCTION, functionLiteral]!!
 
         // Step 1: make the parameters types explicit
-        val newParameterList = JetPsiFactory.createParameterList(element.getProject(), "(" + parameterString + ")")
+        val valueParameters = func.getValueParameters()
+        val parameterString = valueParameters.map({(descriptor: ValueParameterDescriptor?): String ->
+                                                      "" + descriptor!!.getName() +
+                                                      ": " + DescriptorRenderer.TEXT.renderType(descriptor.getType())
+                                                  }).makeString(", ", "(", ")")
+        val newParameterList = JetPsiFactory.createParameterList(element.getProject(), parameterString)
+        val params = functionLiteral.getValueParameterList()
         if (params != null) {
             params.replace(newParameterList)
         }
         else {
-            val openBraceElement = element.getFunctionLiteral().getOpenBraceNode().getPsi()
+            val openBraceElement = functionLiteral.getOpenBraceNode().getPsi()
             val nextSibling = openBraceElement?.getNextSibling()
             val whitespaceToAdd = (if (nextSibling is PsiWhiteSpace && nextSibling?.getText()?.contains("\n")?: false)
-                nextSibling?.copy()
+                nextSibling.copy()
             else
                 null)
             val whitespaceAndArrow = JetPsiFactory.createWhitespaceAndArrow(element.getProject())
-            element.getFunctionLiteral().addRangeAfter(whitespaceAndArrow.first, whitespaceAndArrow.second, openBraceElement)
-            element.getFunctionLiteral().addAfter(newParameterList, openBraceElement)
+            functionLiteral.addRangeAfter(whitespaceAndArrow.first, whitespaceAndArrow.second, openBraceElement)
+            functionLiteral.addAfter(newParameterList, openBraceElement)
             if (whitespaceToAdd != null) {
-                element.getFunctionLiteral().addAfter(whitespaceToAdd, openBraceElement)
+                functionLiteral.addAfter(whitespaceToAdd, openBraceElement)
             }
         }
         ShortenReferences.process(element.getValueParameters())
 
         // Step 2: make the return type explicit
+        val expectedReturnType = func.getReturnType()
         if (expectedReturnType != null) {
-            val paramList = element.getFunctionLiteral().getValueParameterList()
+            val paramList = functionLiteral.getValueParameterList()
             val returnTypeColon = JetPsiFactory.createColon(element.getProject())
             val returnTypeExpr = JetPsiFactory.createType(element.getProject(), DescriptorRenderer.TEXT.renderType(expectedReturnType))
             ShortenReferences.process(returnTypeExpr)
-            element.getFunctionLiteral().addAfter(returnTypeExpr, paramList)
-            element.getFunctionLiteral().addAfter(returnTypeColon, paramList)
+            functionLiteral.addAfter(returnTypeExpr, paramList)
+            functionLiteral.addAfter(returnTypeColon, paramList)
         }
 
         // Step 3: make the receiver type explicit
+        val expectedReceiverType = func.getReceiverParameter()?.getType()
         if (expectedReceiverType != null) {
             val receiverTypeString = DescriptorRenderer.TEXT.renderType(expectedReceiverType)
-            val paramListString = element.getFunctionLiteral().getValueParameterList()?.getText()
+            val paramListString = functionLiteral.getValueParameterList()?.getText()
             val paramListWithReceiver = JetPsiFactory.createExpression(element.getProject(), receiverTypeString + "." + paramListString)
             ShortenReferences.process(paramListWithReceiver)
-            element.getFunctionLiteral().getValueParameterList()?.replace(paramListWithReceiver)
+            functionLiteral.getValueParameterList()?.replace(paramListWithReceiver)
         }
     }
 }

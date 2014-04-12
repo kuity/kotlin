@@ -3103,9 +3103,9 @@ public class CodeTransformationTestGenerated extends AbstractCodeTransformationT
             doTestMakeTypeExplicitInLambda("idea/testData/intentions/makeTypeExplicitInLambda/emptyParamList.kt");
         }
         
-        @TestMetadata("explicitlyTyped.kt")
+        @TestMetadata("typesAlreadyExplicit.kt")
         public void testExplicitlyTyped() throws Exception {
-            doTestMakeTypeExplicitInLambda("idea/testData/intentions/makeTypeExplicitInLambda/explicitlyTyped.kt");
+            doTestMakeTypeExplicitInLambda("idea/testData/intentions/makeTypeExplicitInLambda/typesAlreadyExplicit.kt");
         }
         
         @TestMetadata("multipleParam.kt")
